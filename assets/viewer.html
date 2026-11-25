@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>scene-forge · 3D</title>
+<style>
+  :root { color-scheme: light; --ink: #16181b; --muted: #6b7078; --line: #e3e0d8; --accent: #1d6ae5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f2f1ed; color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  canvas { display: block; }
+  #ui { position: fixed; inset: 0; pointer-events: none; }
+  #bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; background: rgba(255,255,255,.82); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line); pointer-events: auto; }
+  #title { font-size: 17px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #title small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .spacer { flex: 1; }
+  .group { display: flex; gap: 8px; align-items: center; }
+  select, button { font: inherit; font-size: 14px; color: var(--ink); background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 12px; height: 38px; cursor: pointer; }
+  button:hover, select:hover { border-color: #c9c5ba; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.active { border-color: var(--accent); color: var(--accent); }
+  #hint { position: absolute; left: 16px; bottom: 14px; font-size: 13px; color: var(--muted); pointer-events: none; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; background: #f2f1ed; pointer-events: auto; }
+  #loading .card { text-align: center; }
+  .spin { width: 34px; height: 34px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid #ddd8cd; border-top-color: var(--accent); animation: s 0.9s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  #error { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 560px; background: #fff;
+    border: 1px solid #f0c4c4; border-radius: 14px; padding: 20px 22px; font-size: 14px; line-height: 1.5; display: none; pointer-events: auto; }
+  #error pre { white-space: pre-wrap; color: #a12020; margin: 8px 0 0; font-size: 12px; }
+  .hotspot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+    background: rgba(255,255,255,.94); border: 2px solid var(--accent); color: var(--accent); font-size: 13px;
+    font-weight: 700; display: grid; place-items: center; cursor: pointer; pointer-events: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  #spotpanel { position: absolute; right: 16px; bottom: 16px; width: min(340px, 80vw); background: #fff;
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 14px; line-height: 1.5;
+    display: none; pointer-events: auto; }
+  #spotpanel h3 { margin: 0 0 6px; font-size: 16px; }
+  #spotpanel p { margin: 0; color: #3c4046; }
+  #walkhint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(22,24,27,.84);
+    color: #fff; border-radius: 999px; padding: 10px 18px; font-size: 13px; display: none; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="bar">
+    <div id="title">scene-forge<small>3D tour</small></div>
+    <div class="spacer"></div>
+    <div class="group">
+      <select id="cameras" title="Camera"></select>
+      <select id="looks" title="Lighting">
+        <option value="hero">Daylight</option>
+        <option value="dusk">Dusk</option>
+        <option value="plan">Plan</option>
+      </select>
+      <button id="btn-walk" title="First-person walk (WASD, Esc to exit)">Walk</button>
+      <button id="btn-4k" class="primary" title="Download a 3840 × 2160 PNG">PNG 4K</button>
+      <button id="btn-glb" title="Download the model as GLB">GLB</button>
+    </div>
+  </div>
+  <div id="hint">Drag to orbit · scroll to zoom · right-drag to pan</div>
+  <div id="walkhint">WASD to move · mouse to look · Esc to exit</div>
+  <div id="spotpanel"><h3></h3><p></p></div>
+  <div id="loading"><div class="card"><div class="spin"></div><div id="loadtext">Building the scene…</div></div></div>
+  <div id="error"><strong>The scene could not be loaded.</strong><pre id="errmsg"></pre></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createWorld, specToThree } from './scene-core.js';
+
+const params = new URLSearchParams(location.search);
+const showUI = params.get('ui') !== '0';
+const specUrl = params.get('spec') || 'plan.json';
+const glbUrl = params.get('glb') || null;
+const cut = params.get('cut') ? Number(params.get('cut')) : null;
+const look = params.get('look') || 'hero';
+const wantCamera = params.get('camera') || null;
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('c');
+const errorBox = $('error');
+const errmsg = $('errmsg');
+
+function fail(err) {
+  const msg = err && err.stack ? err.stack : String(err);
+  window.__error = msg;
+  console.error(err);
+  errorBox.style.display = 'block';
+  errmsg.textContent = msg;
+  $('loading').style.display = 'none';
+}
+window.addEventListener('error', (e) => fail(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => fail(e.reason));
+
+if (!showUI) { $('ui').style.display = 'none'; }
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(params.get('dpr') ? Number(params.get('dpr')) : Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.AgXToneMapping ?? THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+let world = null;
+let scene = null;
+let camera = null;
+let orbit = null;
+let walk = null;
+let walking = false;
+let hotspots = [];
+let clock = new THREE.Clock();
+
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  if (world) world.setSize(w, h);
+  else if (camera && camera.isPerspectiveCamera) {
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  renderer.render(scene, camera);
+}
+window.addEventListener('resize', resize);
+
+/* --------------------------------------------------------------- GLB-only */
+async function loadGLBOnly() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf2f1ed);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.9;
+  pmrem.dispose();
+
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x584f45, 0.6));
+  const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
+  sun.position.set(6, 10, 4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
+  sun.shadow.camera.top = 12; sun.shadow.camera.bottom = -12;
+  sun.shadow.normalBias = 0.02;
+  scene.add(sun);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xdedad2, roughness: 1 }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  const gltf = await new GLTFLoader().loadAsync(glbUrl);
+  const model = gltf.scene;
+  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.sub(center).add(new THREE.Vector3(0, size.y / 2, 0));
+  scene.add(model);
+
+  const r = Math.max(size.x, size.y, size.z) * 1.15;
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.05, 500);
+  camera.position.set(r * 1.1, r * 0.85, r * 1.1);
+  orbit = new OrbitControls(camera, canvas);
+  orbit.target.set(0, size.y * 0.45, 0);
+  orbit.enableDamping = true;
+  orbit.dampingFactor = 0.08;
+  orbit.update();
+  $('bar').querySelectorAll('#cameras, #looks, #btn-walk').forEach((el) => { el.style.display = 'none'; });
+  $('title').innerHTML = 'scene-forge<small>model · ' + (glbUrl.split('/').pop() || 'GLB') + '</small>';
+}
+
+/* ------------------------------------------------------------------ spec */
+async function loadSpec() {
+  $('loadtext').textContent = 'Loading the spec…';
+  const res = await fetch(specUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Cannot load ${specUrl} (HTTP ${res.status}). Serve this folder over HTTP and keep plan.json next to viewer.html.`);
+  const spec = await res.json();
+  $('loadtext').textContent = 'Building the scene…';
+
+  world = await createWorld(spec, renderer, { cut, look, basePath: '' });
+  scene = world.scene;
+  world.setSize(window.innerWidth, window.innerHeight);
+
+  const camName = wantCamera && world.cameras[wantCamera] ? wantCamera : world.cameraNames[0];
+  camera = world.cameras[camName];
+
+  orbit = new OrbitControls(camera, canvas);
+  orbit.target.copy(camera.userData.target);
+  orbit.enableDamping = true;
+  orbit.dampingFactor = 0.08;
+  orbit.maxPolarAngle = Math.PI * 0.495;
+  orbit.update();
+
+  document.title = `scene-forge · ${spec.name || '3D'}`;
+  $('title').innerHTML = `${spec.name || '3D scene'}<small>${world.meshCount} meshes · ${world.cameraNames.length} cameras</small>`;
+
+  const camSel = $('cameras');
+  camSel.innerHTML = '';
+  for (const name of world.cameraNames) {
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = name;
+    camSel.appendChild(o);
+  }
+  camSel.value = camName;
+  camSel.onchange = () => setCamera(camSel.value);
+
+  $('looks').value = look;
+  $('looks').onchange = () => world.applyLook($('looks').value);
+
+  if (spec.hotspots) addHotspots(spec.hotspots);
+  else fetch('hotspots.json', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => data && addHotspots(data.hotspots || data))
+    .catch(() => {});
+}
+
+function setCamera(name) {
+  if (!world || !world.cameras[name]) return;
+  if (walking) toggleWalk(false);
+  camera = world.cameras[name];
+  orbit.object = camera;
+  orbit.target.copy(camera.userData.target);
+  orbit.update();
+  world.setSize(window.innerWidth, window.innerHeight);
+  $('cameras').value = name;
+}
+
+/* -------------------------------------------------------------- hotspots */
+function addHotspots(list) {
+  if (!Array.isArray(list)) return;
+  const layer = $('ui');
+  for (const h of list) {
+    const el = document.createElement('div');
+    el.className = 'hotspot';
+    el.textContent = h.icon || 'i';
+    el.title = h.name || '';
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const panel = $('spotpanel');
+      panel.querySelector('h3').textContent = h.name || '';
+      panel.querySelector('p').textContent = h.text || '';
+      panel.style.display = 'block';
+    };
+    layer.appendChild(el);
+    hotspots.push({ el, position: specToThree(h.pos[0], h.pos[1], h.pos[2] ?? 1.4) });
+  }
+}
+
+function updateHotspots() {
+  for (const h of hotspots) {
+    const v = h.position.clone().project(camera);
+    const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+    h.el.style.display = visible && !walking ? 'grid' : 'none';
+    if (visible) {
+      h.el.style.left = `${(v.x * 0.5 + 0.5) * window.innerWidth}px`;
+      h.el.style.top = `${(-v.y * 0.5 + 0.5) * window.innerHeight}px`;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ walk */
+function toggleWalk(force) {
+  const on = typeof force === 'boolean' ? force : !walking;
+  if (on === walking) return;
+  if (on) {
+    if (!walk) {
+      walk = new PointerLockControls(camera, canvas);
+      walk.addEventListener('lock', () => {
+        walking = true;
+        orbit.enabled = false;
+        $('btn-walk').classList.add('active');
+        $('walkhint').style.display = 'block';
+        $('hint').style.display = 'none';
+      });
+      walk.addEventListener('unlock', () => {
+        walking = false;
+        orbit.enabled = true;
+        const fwd = new THREE.Vector3();
+        camera.getWorldDirection(fwd);
+        orbit.target.copy(camera.position).addScaledVector(fwd, 4);
+        orbit.update();
+        $('btn-walk').classList.remove('active');
+        $('walkhint').style.display = 'none';
+        $('hint').style.display = 'block';
+      });
+      document.addEventListener('keydown', onKey);
+      document.addEventListener('keyup', onKey);
+    }
+    walk.lock();
+  } else {
+    walk.unlock();
+  }
+}
+
+const keys = {};
+function onKey(e) {
+  keys[e.code] = e.type === 'keydown';
+}
+
+function updateWalk(dt) {
+  if (!walking) return;
+  const speed = (keys['ShiftLeft'] || keys['ShiftRight'] ? 4.2 : 2.2) * dt;
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  fwd.y = 0;
+  fwd.normalize();
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+  const move = new THREE.Vector3();
+  if (keys['KeyW'] || keys['ArrowUp']) move.add(fwd);
+  if (keys['KeyS'] || keys['ArrowDown']) move.sub(fwd);
+  if (keys['KeyD'] || keys['ArrowRight']) move.add(right);
+  if (keys['KeyA'] || keys['ArrowLeft']) move.sub(right);
+  if (move.lengthSq() > 0) camera.position.addScaledVector(move.normalize(), speed);
+  camera.position.y = Math.max(0.6, Math.min(12, camera.position.y));
+}
+
+/* --------------------------------------------------------------- exports */
+function slug(s) { return (s || 'scene').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); }
+
+async function snapshot(w = 3840, h = 2160) {
+  const prevW = window.innerWidth;
+  const prevH = window.innerHeight;
+  const prevRatio = renderer.getPixelRatio();
+  renderer.setPixelRatio(1);
+  renderer.setSize(w, h, false);
+  if (world) world.setSize(w, h);
+  else if (camera.isPerspectiveCamera) { camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  renderer.render(scene, camera);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  renderer.setPixelRatio(prevRatio);
+  renderer.setSize(prevW, prevH);
+  if (world) world.setSize(prevW, prevH);
+  else if (camera.isPerspectiveCamera) { camera.aspect = prevW / prevH; camera.updateProjectionMatrix(); }
+  renderer.render(scene, camera);
+  return blob;
+}
+
+async function download(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+window.__exportGLBBytes = async () => {
+  const exporter = new GLTFExporter();
+  const root = world ? world.content : scene;
+  return await new Promise((resolve, reject) =>
+    exporter.parse(root, resolve, reject, { binary: true, onlyVisible: true })
+  );
+};
+
+$('btn-4k').onclick = async () => {
+  $('loadtext').textContent = 'Rendering 3840 × 2160…';
+  $('loading').style.display = 'grid';
+  const camName = camera.name || 'view';
+  const blob = await snapshot(3840, 2160);
+  $('loading').style.display = 'none';
+  if (blob) download(blob, `${slug(document.title.replace('scene-forge · ', ''))}_${camName}_4k.png`);
+};
+
+$('btn-glb').onclick = async () => {
+  const bytes = await window.__exportGLBBytes();
+  download(new Blob([bytes], { type: 'model/gltf-binary' }), `${slug(document.title.replace('scene-forge · ', ''))}.glb`);
+};
+
+$('btn-walk').onclick = () => toggleWalk();
+
+/* ------------------------------------------------------------------ loop */
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (walking) updateWalk(dt);
+  else if (orbit) orbit.update();
+  renderer.render(scene, camera);
+  updateHotspots();
+}
+
+(async () => {
+  try {
+    if (glbUrl) await loadGLBOnly();
+    else await loadSpec();
+    $('loading').style.display = 'none';
+    renderer.render(scene, camera);
+    tick();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.__sceneReady = true;
+    }));
+  } catch (e) {
+    fail(e);
+  }
+})();
+</script>
+</body>
+</html>

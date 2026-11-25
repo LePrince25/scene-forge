@@ -1,0 +1,116 @@
+{
+  "name": "Apartment 42",
+  "units": "m",
+  "levels": [{ "name": "RDC", "elevation": 0, "height": 2.7 }],
+  "environment": {
+    "sun_elevation": 26,
+    "sun_rotation": 35,
+    "sun_strength": 4.4,
+    "env_intensity": 0.24,
+    "ground": true
+  },
+  "rooms": [
+    { "name": "Séjour", "level": 0, "polygon": [[0, 0], [6, 0], [6, 4.2], [0, 4.2]], "floor": "oak" },
+    { "name": "Chambre", "level": 0, "polygon": [[6, 0], [9.5, 0], [9.5, 4.2], [6, 4.2]], "floor": "oak" },
+    { "name": "Cuisine", "level": 0, "polygon": [[0, 4.2], [6, 4.2], [6, 7], [0, 7]], "floor": "tile" },
+    { "name": "Salle d'eau", "level": 0, "polygon": [[6, 4.2], [9.5, 4.2], [9.5, 7], [6, 7]], "floor": "tile" }
+  ],
+  "walls": [
+    {
+      "level": 0,
+      "from": [0, 0],
+      "to": [9.5, 0],
+      "thickness": 0.24,
+      "openings": [
+        { "type": "window", "offset": 1.8, "width": 1.6, "sill": 0.9, "height": 1.4 },
+        { "type": "window", "offset": 4.2, "width": 1.6, "sill": 0.9, "height": 1.4 },
+        { "type": "window", "offset": 7.6, "width": 1.4, "sill": 0.9, "height": 1.4 }
+      ]
+    },
+    {
+      "level": 0,
+      "from": [9.5, 0],
+      "to": [9.5, 7],
+      "thickness": 0.24,
+      "openings": [
+        { "type": "window", "offset": 2.0, "width": 1.2, "sill": 0.9, "height": 1.3 },
+        { "type": "window", "offset": 5.6, "width": 0.6, "sill": 1.3, "height": 0.6 }
+      ]
+    },
+    {
+      "level": 0,
+      "from": [9.5, 7],
+      "to": [0, 7],
+      "thickness": 0.24,
+      "openings": [
+        { "type": "window", "offset": 2.2, "width": 0.6, "sill": 1.3, "height": 0.6 },
+        { "type": "window", "offset": 5.0, "width": 1.8, "sill": 0.9, "height": 1.4 }
+      ]
+    },
+    {
+      "level": 0,
+      "from": [0, 7],
+      "to": [0, 0],
+      "thickness": 0.24,
+      "openings": [
+        { "type": "door", "offset": 1.2, "width": 0.95, "height": 2.1 },
+        { "type": "window", "offset": 5.2, "width": 1.2, "sill": 0.9, "height": 1.4 }
+      ]
+    },
+    {
+      "level": 0,
+      "from": [0, 4.2],
+      "to": [9.5, 4.2],
+      "thickness": 0.12,
+      "openings": [{ "type": "pass", "offset": 3.0, "width": 2.6, "height": 2.3 }]
+    },
+    {
+      "level": 0,
+      "from": [6, 0],
+      "to": [6, 4.2],
+      "thickness": 0.12,
+      "openings": [{ "type": "door", "offset": 2.6, "width": 0.9, "height": 2.1 }]
+    },
+    {
+      "level": 0,
+      "from": [6, 4.2],
+      "to": [6, 7],
+      "thickness": 0.12,
+      "openings": [{ "type": "door", "offset": 1.2, "width": 0.8, "height": 2.1 }]
+    }
+  ],
+  "furniture": [
+    { "type": "rug", "pos": [4.9, 2.4], "rot": 0, "w": 2.0, "d": 2.2 },
+    { "type": "sofa", "pos": [4.9, 1.5], "rot": 0, "w": 1.9, "d": 0.95 },
+    { "type": "table", "pos": [4.9, 2.5], "rot": 0, "w": 1.0, "d": 0.55, "h": 0.4 },
+    { "type": "tv", "pos": [5.05, 3.92], "rot": 180, "w": 1.4 },
+    { "type": "shelf", "pos": [0.3, 3.0], "rot": 270, "w": 1.0, "d": 0.3, "h": 1.8 },
+    { "type": "plant", "pos": [0.5, 0.6] },
+    { "type": "plant", "pos": [0.45, 3.9] },
+    { "type": "lamp", "pos": [5.82, 3.6] },
+    { "type": "table", "pos": [1.45, 3.35], "rot": 0, "w": 1.15, "d": 0.8, "h": 0.75 },
+    { "type": "chair", "pos": [1.45, 2.7], "rot": 0 },
+    { "type": "chair", "pos": [1.45, 3.88], "rot": 180 },
+    { "type": "chair", "pos": [2.1, 3.35], "rot": 90 },
+    { "type": "chair", "pos": [0.8, 3.35], "rot": 270 },
+    { "type": "bed", "pos": [8.0, 3.1], "rot": 180, "w": 1.6, "d": 2.0 },
+    { "type": "box", "pos": [6.9, 3.85], "rot": 0, "size": [0.45, 0.4, 0.5], "mat": "wood_dark" },
+    { "type": "wardrobe", "pos": [6.42, 1.05], "rot": 90, "w": 1.6, "d": 0.6, "h": 2.15 },
+    { "type": "counter", "pos": [3.2, 6.54], "rot": 180, "w": 4.0, "d": 0.62, "body": "wood_dark" },
+    { "type": "box", "pos": [0.48, 6.5], "rot": 0, "size": [0.68, 0.64, 1.85], "mat": "white" },
+    { "type": "shower", "pos": [8.9, 6.45], "rot": 0, "w": 0.9, "d": 0.9 },
+    { "type": "toilet", "pos": [6.65, 6.4], "rot": 180 },
+    { "type": "sink", "pos": [6.5, 4.6], "rot": 0, "w": 0.8 }
+  ],
+  "cameras": [
+    { "name": "hero", "pos": [0.6, 1.2, 1.62], "target": [5.25, 3.35, 1.1], "lens": 22 },
+    { "name": "bedroom", "pos": [9.25, 0.45, 1.6], "target": [7.0, 2.85, 1.05], "lens": 21 },
+    { "name": "plan", "type": "ortho", "pos": [4.75, 3.5, 30], "target": [4.75, 3.5, 0], "ortho_scale": 12.5 },
+    { "name": "axo", "type": "ortho", "pos": [14.0, -7.5, 11.5], "target": [4.75, 3.5, 0.7], "ortho_scale": 15.5 }
+  ],
+  "hotspots": [
+    { "name": "Séjour", "pos": [2.6, 2.2, 1.5], "text": "Canapé 3 places face au meuble TV, table basse et coin repas 4 couverts." },
+    { "name": "Cuisine", "pos": [3.2, 6.2, 1.5], "text": "Plan de travail de 4 m, plaque et évier sous la fenêtre nord." },
+    { "name": "Chambre", "pos": [8.0, 3.0, 1.3], "text": "Lit 160 × 200 tête contre le mur nord, armoire 2 portes contre le mur ouest." }
+  ]
+}
