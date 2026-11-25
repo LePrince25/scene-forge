@@ -13,7 +13,7 @@ A metric JSON spec drives a live Three.js scene; headless Chrome captures it as 
 ## Install in Claude Code
 
 ```bash
-git clone https://github.com/<your-user>/scene-forge.git ~/.claude/skills/scene-forge
+git clone https://github.com/LePrince25/scene-forge.git ~/.claude/skills/scene-forge
 cd ~/.claude/skills/scene-forge && npm install
 ```
 
@@ -119,7 +119,7 @@ Metres, X east, Y north, Z up. Full schema: [references/plan-spec.md](references
 Installation dans Claude Code :
 
 ```bash
-git clone https://github.com/<your-user>/scene-forge.git ~/.claude/skills/scene-forge
+git clone https://github.com/LePrince25/scene-forge.git ~/.claude/skills/scene-forge
 cd ~/.claude/skills/scene-forge && npm install
 ```
 
